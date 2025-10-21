@@ -1,0 +1,4 @@
+kanin\fileportal\Main.class
+kanin\fileportal\Controller.class
+kanin\fileportal\Launcher.class
+kanin\fileportal\FileTransferThread.class
