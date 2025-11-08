@@ -3,6 +3,7 @@ package kanin.fileportal;
 import javafx.application.Platform;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import kanin.fileportal.security.EncryptionUtil;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -12,70 +13,50 @@ import static kanin.fileportal.Controller.alertMsg;
 
 public class FileTransferThread extends Thread {
 
-    //-----Networking-----//
     private Socket client;
     private ServerSocket host;
-    private final File transferFile; //will be directory if inbound
+    private final File transferFile;
     private final int port;
     private boolean pauseFlag = false;
-    
-    //-----Parameters-----//
-    
-    private String ip; //outbound
-    private File inboundFile; //inbound
-    
-    //-----Display Progress-----//
+
+    private String ip;
+    private File inboundFile;
+
     private final ProgressBar bar = new ProgressBar(0);
     private final TitledPane infoCard = new TitledPane();
     private final Label status = new Label("Status: Created");
 
-    /**
-     * Constructor for a FileTransferThread where the user is hosting
-     * @param file
-     * The directory/file to be saved/sent
-     * @param port
-     * The port to be used to conduct the transfer; used by the ServerSocket
-     */
     public FileTransferThread(File file, int port) {
         this.transferFile = file;
         this.port = port;
 
-        //TitlePane gui representation of this thread
         this.infoCard.getStyleClass().add("transferThread");
         VBox container = new VBox();
         bar.prefWidthProperty().bind(container.widthProperty());
         container.getChildren().addAll(
-            this.status,
-            new Label(String.format("Path: '%s'", file.getAbsolutePath())),
-            this.bar
+                this.status,
+                new Label(String.format("Path: '%s'", file.getAbsolutePath())),
+                this.bar
         );
 
-        //right click menu to control transfer thread
         ContextMenu menu = new ContextMenu();
         MenuItem pause = new MenuItem("Pause"),
-                 cancel = new MenuItem("Cancel");
-        pause.setOnAction(e -> { //toggle pause
-            if(this.client != null)
-                if(pause.getText().equalsIgnoreCase("Pause")) {
+                cancel = new MenuItem("Cancel");
+        pause.setOnAction(e -> {
+            if (this.client != null)
+                if (pause.getText().equalsIgnoreCase("Pause")) {
                     this.pauseFlag = true;
                     pause.setText("Resume");
-                    if(inboundFile == null)
-                        statusUpdate(String.format("[PAUSED] Sending '%s'", transferFile.getName()));
-                    else
-                        statusUpdate(String.format("[PAUSED] Receiving '%s'", inboundFile.getName()));
+                    statusUpdate("[PAUSED]");
                 } else {
                     this.pauseFlag = false;
                     pause.setText("Pause");
-                    if(inboundFile == null)
-                        statusUpdate(String.format("Sending '%s'", transferFile.getName()));
-                    else
-                        statusUpdate(String.format("Receiving '%s'", inboundFile.getName()));
+                    statusUpdate("[RESUMED]");
                 }
         });
         cancel.setOnAction(e -> {
             Controller.transferList.getPanes().remove(this.infoCard);
-            if(this.isAlive())
-                this.interrupt();
+            if (this.isAlive()) this.interrupt();
             disconnect();
         });
         menu.getItems().addAll(pause, cancel);
@@ -83,15 +64,6 @@ public class FileTransferThread extends Thread {
         this.infoCard.setContent(container);
     }
 
-    /**
-     * Constructor for a FileTransferThread where the user is not hosting
-     * @param file
-     * The directory/file to be saved/sent
-     * @param port
-     * The port to be used to conduct the transfer; used by the Socket
-     * @param ip
-     * The IP of the peer to connect to
-     */
     public FileTransferThread(File file, int port, String ip) {
         this(file, port);
         this.ip = ip;
@@ -100,8 +72,8 @@ public class FileTransferThread extends Thread {
     @Override
     public void run() {
         try {
-            //initialize connections
-            if(this.ip == null) { //Create server and wait for client, ip won't be passed if hosting
+            // 🔌 Establish connection
+            if (this.ip == null) {
                 this.host = new ServerSocket(this.port);
                 Platform.runLater(() -> {
                     this.infoCard.setText("Host Connection @localhost:" + this.port);
@@ -109,7 +81,7 @@ public class FileTransferThread extends Thread {
                     Controller.transferList.getPanes().add(this.infoCard);
                 });
                 this.client = this.host.accept();
-            } else { //Connect to server
+            } else {
                 this.client = new Socket(this.ip, this.port);
                 Platform.runLater(() -> {
                     this.infoCard.setText(String.format("Remote Connection @%s:%d", this.ip, this.port));
@@ -117,114 +89,156 @@ public class FileTransferThread extends Thread {
                     Controller.transferList.getPanes().add(this.infoCard);
                 });
             }
-            //transfer file
+
             long start = System.currentTimeMillis();
-            if(this.transferFile.isDirectory())
+
+            // 🚀 Transfer logic
+            if (this.transferFile.isDirectory())
                 incomingTransfer();
             else
                 outgoingTransfer();
-            //notify user
+
+            // ✅ Log successful transfer
+            String sender = (ip == null) ? "Host" : "Client";
+            String receiver = (ip == null) ? "Receiver" : "Host";
+            DatabaseManager.insertTransfer(
+                    (inboundFile != null ? inboundFile.getName() : transferFile.getName()),
+                    sender,
+                    receiver,
+                    (inboundFile != null ? inboundFile.length() : transferFile.length()),
+                    "Success"
+            );
+
+            // ✅ UI Notification
             Platform.runLater(() -> {
-                String fileName = transferFile.getName(),
-                       subtext = "Elapsed time: " + (System.currentTimeMillis() - start) / 1000 + " seconds";
-                if(inboundFile != null) {
-                    fileName = inboundFile.getName();
-                    subtext += String.format("\nSee '%s'", inboundFile.getAbsolutePath());
-                }
-                Controller.transferList.getPanes().remove(this.infoCard); //If the file transfer was successful, remove from 'transferList'
-                alertMsg(fileName + " successfully transferred.", subtext, Alert.AlertType.INFORMATION); //display the elapsed time
+                String fileName = (inboundFile != null) ? inboundFile.getName() : transferFile.getName();
+                String subtext = "Elapsed time: " + (System.currentTimeMillis() - start) / 1000 + " seconds";
+                if (inboundFile != null)
+                    subtext += String.format("\nSaved to '%s'", inboundFile.getAbsolutePath());
+                Controller.transferList.getPanes().remove(this.infoCard);
+                alertMsg(fileName + " successfully transferred.", subtext, Alert.AlertType.INFORMATION);
             });
-        } catch(IOException e) {
+
+        } catch (Exception e) {
             e.printStackTrace();
-            if(this.inboundFile != null) //If the file transfer fails, the partially generated file is deleted
-                this.inboundFile.delete();
-            if(!e.getMessage().equalsIgnoreCase("Socket closed") && !e.getMessage().equalsIgnoreCase("Connection reset by peer"))
-                Platform.runLater(() -> 
-                    alertMsg(
-                        "Error: " + e.getMessage(), 
-                        "Please enter a valid IP Address or check your settings.", 
-                        Alert.AlertType.ERROR
-                    ));
+
+            // ❌ Log failure safely
+            String fileName = (transferFile != null) ? transferFile.getName() : "Unknown";
+            long fileSize = (transferFile != null) ? transferFile.length() : 0;
+
+            DatabaseManager.insertTransfer(
+                    fileName,
+                    (ip == null) ? "Host" : "Client",
+                    (ip == null) ? "Receiver" : ip,
+                    fileSize,
+                    "Failed: " + e.getMessage()
+            );
+
+            Platform.runLater(() -> alertMsg(
+                    "Error: " + e.getMessage(),
+                    "File transfer failed.",
+                    Alert.AlertType.ERROR
+            ));
         } finally {
             disconnect();
             Platform.runLater(() -> Controller.transferList.getPanes().remove(this.infoCard));
         }
     }
 
-    private void statusUpdate(String s) { Platform.runLater(() -> this.status.setText("Status: " + s)); }
-
-    private void outgoingTransfer() throws IOException {
-        //Sends the name and size of the file before the file contents
-        PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
-        writer.println(transferFile.getName() + (char)28 + transferFile.length());
-        statusUpdate(String.format("Sending '%s'", transferFile.getName()));
-        transfer(
-            new BufferedInputStream(new FileInputStream(transferFile)),
-            new BufferedOutputStream(client.getOutputStream()),
-            transferFile.length()
-        );
+    private void statusUpdate(String s) {
+        Platform.runLater(() -> this.status.setText("Status: " + s));
     }
-  
+
+    // 🔐 Outgoing (send)
+    private void outgoingTransfer() throws IOException {
+        try {
+            PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
+            writer.println(transferFile.getName() + (char) 28 + transferFile.length());
+
+            statusUpdate("Encrypting and sending '" + transferFile.getName() + "'...");
+
+            byte[] fileData = readFileBytes(transferFile);
+            byte[] encryptedData = EncryptionUtil.encrypt(fileData);
+
+            transfer(new ByteArrayInputStream(encryptedData),
+                    new BufferedOutputStream(client.getOutputStream()),
+                    encryptedData.length);
+
+            statusUpdate("File sent successfully.");
+
+        } catch (Exception e) {
+            throw new IOException("Outgoing transfer error: " + e.getMessage(), e);
+        }
+    }
+
+    // 🔓 Incoming (receive)
     private void incomingTransfer() throws IOException {
-        //incoming file setup
         String directory = transferFile.getAbsolutePath();
         BufferedReader input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-        String[] info = input.readLine().split("" + (char)28); //Reads in file name/size
+        String[] info = input.readLine().split("" + (char) 28);
         this.inboundFile = new File(directory + "/" + info[0]);
-        int extensionIndex = info[0].lastIndexOf(".");
-        if(extensionIndex < 0) //if the file has no extension
-            extensionIndex = info[0].length();
-        for(int i=0; !this.inboundFile.createNewFile(); i++) //Adjusts the file name if a file of the same name in the same directory exists
-            this.inboundFile = 
-                new File(String.format("%s/%s%d%s", directory, info[0].substring(0, extensionIndex), i, info[0].substring(extensionIndex)));
-        statusUpdate(String.format("[CONFIRM] Receiving '%s'", inboundFile.getName()));
-        this.pauseFlag = true; //by default incoming file transfers are paused as a pseudo confirm
-        this.infoCard.getContextMenu().getItems().get(0).setText("Confirm");
-        transfer(
-            new BufferedInputStream(this.client.getInputStream()),
-            new BufferedOutputStream(new FileOutputStream(this.inboundFile)),
-            Long.parseLong(info[1]) //file size
-        );
-    }
-    
-    private void transfer(BufferedInputStream in, BufferedOutputStream out, long size) throws IOException {
+        while (!this.inboundFile.createNewFile()) {
+            this.inboundFile = new File(directory + "/copy_" + info[0]);
+        }
+
+        statusUpdate("Receiving and decrypting '" + inboundFile.getName() + "'...");
+
+        ByteArrayOutputStream receivedData = new ByteArrayOutputStream();
+        transfer(new BufferedInputStream(this.client.getInputStream()),
+                new BufferedOutputStream(receivedData),
+                Long.parseLong(info[1]));
+
         try {
-            int amt; //length of read bytes
-            double total = 0; //total # of read bytes
-            byte[] bin = new byte[10 * 1024 * 1024]; //maximum of 10MB is read per iteration
-            while(true) //if we pause just have this thread idle
-                synchronized(this) {
-                    if(!pauseFlag) //pause flag is used because pausing this thread would also pause the connection
-                        if((amt = in.read(bin)) > 0) {
-                            out.write(bin, 0, amt);
-                            out.flush();
-                            System.out.printf("Transferring %d bytes\n", amt);
-                            final double progress = (total += amt) / size;
-                            Platform.runLater(() -> bar.setProgress(progress)); //Display progress
-                        } else
-                            break;
+            byte[] decryptedData = EncryptionUtil.decrypt(receivedData.toByteArray());
+            writeFileBytes(inboundFile, decryptedData);
+            statusUpdate("Decryption complete.");
+        } catch (Exception e) {
+            throw new IOException("Incoming transfer error: " + e.getMessage(), e);
+        }
+    }
+
+    // 📦 Transfer bytes between streams
+    private void transfer(InputStream in, OutputStream out, long size) throws IOException {
+        try {
+            int amt;
+            double total = 0;
+            byte[] buffer = new byte[1024 * 8];
+            while ((amt = in.read(buffer)) != -1) {
+                synchronized (this) {
+                    if (!pauseFlag) {
+                        out.write(buffer, 0, amt);
+                        out.flush();
+                        final double progress = (total += amt) / size;
+                        Platform.runLater(() -> bar.setProgress(progress));
+                    }
                 }
-        } catch(IOException e) { throw e; } //pass error back up the call stack 
-        finally {
+            }
+        } finally {
             in.close();
             out.close();
         }
     }
 
-    //Connections are severed for both parties upon successful/unsuccessful file transfer
-    public void disconnect() {
+    private void disconnect() {
         try {
-            if(this.client != null)
+            if (this.client != null)
                 this.client.close();
-            if(this.host != null)
+            if (this.host != null)
                 this.host.close();
-            if(this.host != null || this.client != null)
-                System.out.println("Connections terminated.");
-        } catch(IOException e) { e.printStackTrace(); }
-        finally {
-            this.client = null;
-            this.host = null;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static byte[] readFileBytes(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            return fis.readAllBytes();
+        }
+    }
+
+    private static void writeFileBytes(File file, byte[] data) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data);
         }
     }
 }
-

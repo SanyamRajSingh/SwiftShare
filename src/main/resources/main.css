@@ -1,21 +1,245 @@
-/*Basic Dark Theme, Blue-Accented */
+/* =========================================================
+   🌌 SwiftShare - Modern Dark Mode (v3.0)
+   ========================================================= */
 
-.root { 
-	-fx-background-color: #2d2d2d;
-    -fx-font-family: Verdana;
+.root {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-family: "Segoe UI", sans-serif;
 }
 
+/* ---------- Text Fields ---------- */
+.text-field {
+    -fx-background-color: #2b2b2b;
+    -fx-text-fill: #f5f5f5;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #3a3a3a;
+    -fx-border-width: 1;
+    -fx-padding: 6 12;
+    -fx-font-size: 13px;
+    -fx-transition: all 0.3s ease-in-out;
+}
+
+.text-field:focused {
+    -fx-border-color: #00b4ff;
+    -fx-effect: dropshadow(gaussian, rgba(0,180,255,0.45), 8, 0.6, 0, 0);
+}
+
+/* ---------- Buttons ---------- */
 .button {
-    -fx-background-color: #4081b3;
-    -fx-text-fill: #f3f3f3;
-    -fx-background-radius: 5%;
-    -fx-effect: dropshadow(gaussian, #141414, 8, 0, 0, 2)
+    -fx-background-color: linear-gradient(to bottom right, #0094ff, #00d2ff);
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-cursor: hand;
+    -fx-padding: 7 16;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 6, 0.2, 0, 3);
+    -fx-transition: all 0.2s ease-in-out;
 }
 
-.transferThread, .transferThread VBox {
-	-fx-background-color: #2d2d2d;
+.button:hover {
+    -fx-background-color: linear-gradient(to bottom right, #00aaff, #33ccff);
+    -fx-effect: dropshadow(gaussian, rgba(0,180,255,0.55), 10, 0.5, 0, 2);
 }
 
-Label {
-    -fx-text-fill: #f3f3f3;
+.button:pressed {
+    -fx-background-color: linear-gradient(to bottom right, #007acc, #0096ff);
+}
+
+/* ---------- CheckBox ---------- */
+.check-box {
+    -fx-text-fill: #f0f0f0;
+}
+
+.check-box .box {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #0096ff;
+    -fx-border-radius: 5;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #00aaff;
+}
+
+/* ---------- Split Pane ---------- */
+.split-pane {
+    -fx-background-color: #1e1e1e;
+}
+
+.split-pane-divider {
+    -fx-background-color: #3c3c3c;
+}
+
+/* ---------- Transfer Container ---------- */
+#transferContainer {
+    -fx-background-color: #1b1b1b;
+    -fx-background-radius: 15;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 15;
+    -fx-padding: 15;
+}
+
+/* ---------- Transfer Thread Cards ---------- */
+.transferThread {
+    -fx-background-color: #242424;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #2a2a2a;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0.2, 0, 3);
+    -fx-transition: all 0.3s ease-in-out;
+}
+
+.transferThread:hover {
+    -fx-border-color: #00aaff;
+    -fx-effect: dropshadow(gaussian, rgba(0,150,255,0.4), 12, 0.5, 0, 2);
+}
+
+/* ---------- Titled Pane Header ---------- */
+.titled-pane > .title {
+    -fx-background-color: linear-gradient(to right, #333333, #292929);
+    -fx-background-radius: 10 10 0 0;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12;
+}
+
+/* ---------- Progress Bar ---------- */
+.progress-bar {
+    -fx-accent: #00bfff;
+    -fx-background-color: #2a2a2a;
+    -fx-background-radius: 8;
+    -fx-padding: 2;
+}
+
+.progress-bar .bar {
+    -fx-background-radius: 8;
+    -fx-background-color: linear-gradient(to right, #00b4ff, #00e5ff, #00b4ff);
+    -fx-effect: dropshadow(gaussian, rgba(0,200,255,0.6), 8, 0.5, 0, 0);
+    -fx-animation: pulse 1.5s infinite linear;
+}
+
+@keyframes pulse {
+    0%   { -fx-opacity: 1; }
+    50%  { -fx-opacity: 0.75; }
+    100% { -fx-opacity: 1; }
+}
+
+/* ---------- Dialog Boxes ---------- */
+.dialog-pane {
+    -fx-background-color: #2a2a2a;
+}
+
+.dialog-pane .label {
+    -fx-text-fill: #ffffff;
+}
+
+.dialog-pane .button {
+    -fx-background-color: linear-gradient(to right, #0078ff, #00c6ff);
+}
+
+/* =========================================================
+   🧾 SwiftShare Transfer History Styling (Enhanced v3)
+   ========================================================= */
+
+.history-table {
+    -fx-background-color: #181818;
+    -fx-border-color: #2b2b2b;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-table-cell-border-color: #2a2a2a;
+    -fx-font-size: 13px;
+}
+
+/* ---------- Table Header ---------- */
+.table-view .column-header-background {
+    -fx-background-color: linear-gradient(to bottom, #0a0a0a, #171717);
+    -fx-background-radius: 8 8 0 0;
+    -fx-border-color: #0078ff;
+    -fx-border-width: 0 0 2 0;
+}
+
+.table-view .column-header,
+.table-view .column-header .label {
+    -fx-text-fill: linear-gradient(to right, #00c6ff, #0096ff);
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-font-family: "Segoe UI Semibold";
+    -fx-effect: dropshadow(gaussian, rgba(0,180,255,0.45), 6, 0.3, 0, 0);
+    -fx-alignment: CENTER;
+    -fx-padding: 8 4;
+    -fx-transition: all 0.2s ease-in-out;
+}
+
+/* Header hover glow */
+.table-view .column-header:hover .label {
+    -fx-effect: dropshadow(gaussian, rgba(0,200,255,0.7), 8, 0.4, 0, 0);
+    -fx-text-fill: linear-gradient(to right, #33ddff, #00b4ff);
+}
+
+/* ---------- Table Rows ---------- */
+.table-row-cell {
+    -fx-background-color: #1f1f1f;
+    -fx-border-color: #2a2a2a;
+    -fx-text-fill: #f5f5f5;
+    -fx-font-size: 13px;
+    -fx-cell-size: 30px;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #262626;
+    -fx-effect: dropshadow(gaussian, rgba(0,150,255,0.3), 8, 0.4, 0, 0);
+}
+
+/* ✅ Colored status text (logs) */
+.table-row-cell .text {
+    -fx-fill: #f5f5f5;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: linear-gradient(to right, #0099ff, #00d4ff);
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-border-color: transparent;
+}
+
+/* Alternating rows */
+.table-row-cell:odd {
+    -fx-background-color: #1b1b1b;
+}
+.table-row-cell:even {
+    -fx-background-color: #1e1e1e;
+}
+
+/* ---------- Status Color Highlights ---------- */
+.table-cell:filled:selected .text {
+    -fx-fill: white;
+}
+.table-cell:filled .text {
+    -fx-fill: #eaeaea;
+}
+.table-cell:filled .text:contains("Success") {
+    -fx-fill: #00ff9d; /* 🟢 Success */
+}
+.table-cell:filled .text:contains("Failed") {
+    -fx-fill: #ff4c4c; /* 🔴 Failure */
+}
+.table-cell:filled .text:contains("Pending") {
+    -fx-fill: #ffd84c; /* 🟡 Pending */
+}
+
+/* ---------- Scroll Bar ---------- */
+.scroll-bar:vertical, .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #00aaff;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0,200,255,0.4), 8, 0.3, 0, 0);
 }

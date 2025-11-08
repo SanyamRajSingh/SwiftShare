@@ -1,4 +1,9 @@
+kanin\fileportal\TransferRecord.class
+kanin\fileportal\Insets.class
+kanin\fileportal\HistoryWindow.class
 kanin\fileportal\Main.class
 kanin\fileportal\Controller.class
-kanin\fileportal\Launcher.class
+kanin\fileportal\DatabaseManager.class
 kanin\fileportal\FileTransferThread.class
+kanin\fileportal\Launcher.class
+kanin\fileportal\security\EncryptionUtil.class
