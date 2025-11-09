@@ -17,21 +17,25 @@ import java.sql.Statement;
 
 /**
  * 💾 SwiftShare Transfer History Window
- * Modern dark mode with auto-refresh and manual reload.
+ * Displays the file transfer history stored in the SQLite database.
+ * The window supports both manual and automatic refreshing of data.
+ * It uses a modern dark-themed design consistent with the rest of the app.
  */
 public class HistoryWindow {
 
-    private static final String DB_URL = "jdbc:sqlite:swiftshare.db";
-    private static Timeline autoRefreshTimeline;
+    private static final String DB_URL = "jdbc:sqlite:swiftshare.db"; // Database file location
+    private static Timeline autoRefreshTimeline; // Timer for periodic updates
 
+    // ---------- Main Window Setup ----------
     public static void show() {
         Stage stage = new Stage();
         stage.setTitle("Transfer History");
 
-        // 🧾 Table Setup
+        // 🧾 Create and style the table that displays transfer logs
         TableView<TransferRecord> table = new TableView<>();
         table.getStyleClass().add("history-table");
 
+        // Table columns for file details and status
         TableColumn<TransferRecord, String> fileCol = new TableColumn<>("File Name");
         fileCol.setCellValueFactory(c -> c.getValue().fileNameProperty());
         fileCol.setPrefWidth(180);
@@ -58,7 +62,7 @@ public class HistoryWindow {
 
         table.getColumns().addAll(fileCol, senderCol, receiverCol, sizeCol, dateCol, statusCol);
 
-        // 🎨 Header Title
+        // ---------- UI Header (Title + Refresh Controls) ----------
         Label title = new Label("📦 SwiftShare Transfer History");
         title.setStyle(
                 "-fx-font-size: 20px;" +
@@ -66,11 +70,9 @@ public class HistoryWindow {
                 "-fx-font-weight: bold;"
         );
 
-        // 🕓 Auto-refresh label
         Label refreshLabel = new Label("Auto-refreshing every 5 seconds...");
         refreshLabel.setStyle("-fx-text-fill: #bbbbbb; -fx-font-size: 12px;");
 
-        // 🔄 Manual refresh button
         Button manualRefresh = new Button("↻ Refresh Now");
         manualRefresh.setOnAction(e -> new Thread(() -> loadData(table)).start());
         manualRefresh.setStyle(
@@ -79,6 +81,8 @@ public class HistoryWindow {
                 "-fx-background-radius: 8; -fx-padding: 6 16 6 16;" +
                 "-fx-cursor: hand;"
         );
+
+        // Button hover effects for interactivity
         manualRefresh.setOnMouseEntered(e -> manualRefresh.setStyle(
                 "-fx-background-color: linear-gradient(to right, #0096ff, #33ccff);" +
                 "-fx-text-fill: white; -fx-font-weight: bold;" +
@@ -92,30 +96,27 @@ public class HistoryWindow {
                 "-fx-cursor: hand;"
         ));
 
-        // 🧭 Top section layout
         HBox topBar = new HBox(15, title, manualRefresh);
         topBar.setPadding(new Insets(5, 0, 10, 0));
 
-        // 🖼 Root container
+        // ---------- Root Layout Container ----------
         VBox root = new VBox(10, topBar, refreshLabel, table);
         root.setPadding(new Insets(20));
         root.setPrefSize(800, 480);
         root.setStyle("-fx-background-color: #121212; -fx-border-color: #2b2b2b; -fx-border-radius: 8;");
 
+        // Apply stylesheet and display window
         Scene scene = new Scene(root);
         scene.getStylesheets().add(Main.class.getResource("/main.css").toExternalForm());
-
         stage.setScene(scene);
         stage.show();
 
-        // 🔁 Start auto-refreshing
+        // Start and stop auto-refresh when appropriate
         startAutoRefresh(table);
-
-        // 🛑 Stop when window closes
         stage.setOnCloseRequest(event -> stopAutoRefresh());
     }
 
-    /** 🔁 Load data from database */
+    // ---------- Load Data from Database ----------
     private static void loadData(TableView<TransferRecord> table) {
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement();
@@ -147,7 +148,7 @@ public class HistoryWindow {
         }
     }
 
-    /** 🕓 Start auto-refresh every 5 seconds */
+    // ---------- Auto-Refresh Setup ----------
     private static void startAutoRefresh(TableView<TransferRecord> table) {
         if (autoRefreshTimeline != null) {
             autoRefreshTimeline.stop();
@@ -155,13 +156,13 @@ public class HistoryWindow {
 
         autoRefreshTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(0), event -> new Thread(() -> loadData(table)).start()),
-                new KeyFrame(Duration.seconds(5))
+                new KeyFrame(Duration.seconds(5)) // Refresh every 5 seconds
         );
         autoRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
         autoRefreshTimeline.play();
     }
 
-    /** 🛑 Stop refreshing */
+    // ---------- Stop Auto-Refresh ----------
     private static void stopAutoRefresh() {
         if (autoRefreshTimeline != null) {
             autoRefreshTimeline.stop();

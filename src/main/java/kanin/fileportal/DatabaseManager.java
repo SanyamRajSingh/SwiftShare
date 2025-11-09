@@ -2,15 +2,23 @@ package kanin.fileportal;
 
 import java.sql.*;
 
+/**
+ * DatabaseManager handles all SQLite database operations for SwiftShare.
+ * It manages creating tables, inserting transfer logs, and fetching history.
+ */
 public class DatabaseManager {
 
-    private static final String DB_URL = "jdbc:sqlite:swiftshare.db";
+    // ---------- Database Configuration ----------
+    private static final String DB_URL = "jdbc:sqlite:swiftshare.db"; // SQLite database file
 
-    // ✅ Initialize database and table
+    // ---------- Database Initialization ----------
+
+    /** Creates the database and transfer_history table if not already present */
     public static void initializeDatabase() {
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement()) {
 
+            // Create table to store transfer logs (file name, sender, receiver, size, date, and status)
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS transfer_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +38,9 @@ public class DatabaseManager {
         }
     }
 
-    // ✅ Insert a new transfer record
+    // ---------- Insert Operation ----------
+
+    /** Inserts a new record into the transfer_history table */
     public static void insertTransfer(String fileName, String sender, String receiver, long size, String status) {
         String sql = """
             INSERT INTO transfer_history (file_name, sender, receiver, size_bytes, status)
@@ -40,6 +50,7 @@ public class DatabaseManager {
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+            // Bind parameters to prevent SQL injection
             pstmt.setString(1, fileName);
             pstmt.setString(2, sender);
             pstmt.setString(3, receiver);
@@ -54,7 +65,9 @@ public class DatabaseManager {
         }
     }
 
-    // ✅ Fetch all transfers
+    // ---------- Fetch Operation ----------
+
+    /** Retrieves all previous transfer records from the database, ordered by date (latest first) */
     public static ResultSet fetchTransfers() throws SQLException {
         Connection conn = DriverManager.getConnection(DB_URL);
         Statement stmt = conn.createStatement();

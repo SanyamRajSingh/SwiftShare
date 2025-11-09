@@ -11,25 +11,32 @@ import java.net.Socket;
 
 import static kanin.fileportal.Controller.alertMsg;
 
+/**
+ * FileTransferThread manages the entire process of file sending and receiving.
+ * Each file transfer runs in its own thread to ensure non-blocking parallel operations.
+ */
 public class FileTransferThread extends Thread {
 
+    // ---------- Connection and File Variables ----------
     private Socket client;
     private ServerSocket host;
     private final File transferFile;
     private final int port;
     private boolean pauseFlag = false;
-
     private String ip;
     private File inboundFile;
 
+    // ---------- UI Components for Transfer Progress ----------
     private final ProgressBar bar = new ProgressBar(0);
     private final TitledPane infoCard = new TitledPane();
     private final Label status = new Label("Status: Created");
 
+    // ---------- Constructor for Host (Sender) ----------
     public FileTransferThread(File file, int port) {
         this.transferFile = file;
         this.port = port;
 
+        // Create UI Card for ongoing transfer
         this.infoCard.getStyleClass().add("transferThread");
         VBox container = new VBox();
         bar.prefWidthProperty().bind(container.widthProperty());
@@ -39,6 +46,7 @@ public class FileTransferThread extends Thread {
                 this.bar
         );
 
+        // Context menu for pausing or cancelling transfer
         ContextMenu menu = new ContextMenu();
         MenuItem pause = new MenuItem("Pause"),
                 cancel = new MenuItem("Cancel");
@@ -64,24 +72,26 @@ public class FileTransferThread extends Thread {
         this.infoCard.setContent(container);
     }
 
+    // ---------- Constructor for Client (Receiver) ----------
     public FileTransferThread(File file, int port, String ip) {
         this(file, port);
         this.ip = ip;
     }
 
+    // ---------- Main Thread Logic ----------
     @Override
     public void run() {
         try {
-            // 🔌 Establish connection
-            if (this.ip == null) {
+            // 🔌 Establish Connection between Host and Client
+            if (this.ip == null) { // Host Mode
                 this.host = new ServerSocket(this.port);
                 Platform.runLater(() -> {
                     this.infoCard.setText("Host Connection @localhost:" + this.port);
                     statusUpdate("Waiting...");
                     Controller.transferList.getPanes().add(this.infoCard);
                 });
-                this.client = this.host.accept();
-            } else {
+                this.client = this.host.accept(); // Wait for client connection
+            } else { // Client Mode
                 this.client = new Socket(this.ip, this.port);
                 Platform.runLater(() -> {
                     this.infoCard.setText(String.format("Remote Connection @%s:%d", this.ip, this.port));
@@ -92,13 +102,13 @@ public class FileTransferThread extends Thread {
 
             long start = System.currentTimeMillis();
 
-            // 🚀 Transfer logic
+            // 🚀 Execute File Transfer (Send or Receive)
             if (this.transferFile.isDirectory())
                 incomingTransfer();
             else
                 outgoingTransfer();
 
-            // ✅ Log successful transfer
+            // ✅ Log transfer success in database
             String sender = (ip == null) ? "Host" : "Client";
             String receiver = (ip == null) ? "Receiver" : "Host";
             DatabaseManager.insertTransfer(
@@ -109,7 +119,7 @@ public class FileTransferThread extends Thread {
                     "Success"
             );
 
-            // ✅ UI Notification
+            // ✅ Notify User of Successful Transfer
             Platform.runLater(() -> {
                 String fileName = (inboundFile != null) ? inboundFile.getName() : transferFile.getName();
                 String subtext = "Elapsed time: " + (System.currentTimeMillis() - start) / 1000 + " seconds";
@@ -122,7 +132,7 @@ public class FileTransferThread extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
 
-            // ❌ Log failure safely
+            // ❌ Log transfer failure
             String fileName = (transferFile != null) ? transferFile.getName() : "Unknown";
             long fileSize = (transferFile != null) ? transferFile.length() : 0;
 
@@ -134,22 +144,25 @@ public class FileTransferThread extends Thread {
                     "Failed: " + e.getMessage()
             );
 
+            // Display error alert in UI
             Platform.runLater(() -> alertMsg(
                     "Error: " + e.getMessage(),
                     "File transfer failed.",
                     Alert.AlertType.ERROR
             ));
         } finally {
+            // Disconnect sockets and cleanup UI
             disconnect();
             Platform.runLater(() -> Controller.transferList.getPanes().remove(this.infoCard));
         }
     }
 
+    // ---------- UI Helper for Status Update ----------
     private void statusUpdate(String s) {
         Platform.runLater(() -> this.status.setText("Status: " + s));
     }
 
-    // 🔐 Outgoing (send)
+    // ---------- Outgoing (Send) File Transfer ----------
     private void outgoingTransfer() throws IOException {
         try {
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
@@ -171,7 +184,7 @@ public class FileTransferThread extends Thread {
         }
     }
 
-    // 🔓 Incoming (receive)
+    // ---------- Incoming (Receive) File Transfer ----------
     private void incomingTransfer() throws IOException {
         String directory = transferFile.getAbsolutePath();
         BufferedReader input = new BufferedReader(new InputStreamReader(client.getInputStream()));
@@ -197,7 +210,7 @@ public class FileTransferThread extends Thread {
         }
     }
 
-    // 📦 Transfer bytes between streams
+    // ---------- Core Byte Transfer Logic ----------
     private void transfer(InputStream in, OutputStream out, long size) throws IOException {
         try {
             int amt;
@@ -219,6 +232,7 @@ public class FileTransferThread extends Thread {
         }
     }
 
+    // ---------- Disconnect and Cleanup ----------
     private void disconnect() {
         try {
             if (this.client != null)
@@ -230,6 +244,7 @@ public class FileTransferThread extends Thread {
         }
     }
 
+    // ---------- Utility: Read and Write File Bytes ----------
     private static byte[] readFileBytes(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             return fis.readAllBytes();

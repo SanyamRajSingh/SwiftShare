@@ -1,14 +1,21 @@
 /* =========================================================
    🌌 SwiftShare - Modern Dark Mode (v3.0)
-   ========================================================= */
+   =========================================================
+   This stylesheet defines the overall look and feel of SwiftShare.
+   It uses a sleek, dark aesthetic with glowing blue accents for clarity and readability.
+   Sections are divided logically for UI components such as text fields, buttons, tables, etc.
+*/
 
+/* ---------- Root (Global UI Styling) ---------- */
 .root {
     -fx-background-color: #1e1e1e;
     -fx-text-fill: #e0e0e0;
     -fx-font-family: "Segoe UI", sans-serif;
 }
 
-/* ---------- Text Fields ---------- */
+/* ---------- Text Fields ---------- 
+   Styling for all text input fields including hover and focus effects.
+*/
 .text-field {
     -fx-background-color: #2b2b2b;
     -fx-text-fill: #f5f5f5;
@@ -26,7 +33,9 @@
     -fx-effect: dropshadow(gaussian, rgba(0,180,255,0.45), 8, 0.6, 0, 0);
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons ---------- 
+   Defines the gradient color scheme and hover/pressed animations for buttons.
+*/
 .button {
     -fx-background-color: linear-gradient(to bottom right, #0094ff, #00d2ff);
     -fx-text-fill: #ffffff;
@@ -49,7 +58,9 @@
     -fx-background-color: linear-gradient(to bottom right, #007acc, #0096ff);
 }
 
-/* ---------- CheckBox ---------- */
+/* ---------- CheckBox ---------- 
+   Defines modern checkbox design with blue accents when selected.
+*/
 .check-box {
     -fx-text-fill: #f0f0f0;
 }
@@ -64,7 +75,9 @@
     -fx-background-color: #00aaff;
 }
 
-/* ---------- Split Pane ---------- */
+/* ---------- Split Pane ---------- 
+   Custom styling for the divider and background between panels.
+*/
 .split-pane {
     -fx-background-color: #1e1e1e;
 }
@@ -73,7 +86,9 @@
     -fx-background-color: #3c3c3c;
 }
 
-/* ---------- Transfer Container ---------- */
+/* ---------- Transfer Container ---------- 
+   Container box for file transfer cards.
+*/
 #transferContainer {
     -fx-background-color: #1b1b1b;
     -fx-background-radius: 15;
@@ -82,7 +97,9 @@
     -fx-padding: 15;
 }
 
-/* ---------- Transfer Thread Cards ---------- */
+/* ---------- Transfer Thread Cards ---------- 
+   Each active file transfer is represented as a card with shadows and hover effects.
+*/
 .transferThread {
     -fx-background-color: #242424;
     -fx-background-radius: 12;
@@ -99,7 +116,9 @@
     -fx-effect: dropshadow(gaussian, rgba(0,150,255,0.4), 12, 0.5, 0, 2);
 }
 
-/* ---------- Titled Pane Header ---------- */
+/* ---------- Titled Pane Header ---------- 
+   Styles the headers of titled panes used in transfer threads.
+*/
 .titled-pane > .title {
     -fx-background-color: linear-gradient(to right, #333333, #292929);
     -fx-background-radius: 10 10 0 0;
@@ -109,7 +128,9 @@
     -fx-padding: 8 12;
 }
 
-/* ---------- Progress Bar ---------- */
+/* ---------- Progress Bar ---------- 
+   Used for file transfer progress visualization with glow effects.
+*/
 .progress-bar {
     -fx-accent: #00bfff;
     -fx-background-color: #2a2a2a;
@@ -130,7 +151,9 @@
     100% { -fx-opacity: 1; }
 }
 
-/* ---------- Dialog Boxes ---------- */
+/* ---------- Dialog Boxes ---------- 
+   Defines colors and button themes for alert and confirmation dialogs.
+*/
 .dialog-pane {
     -fx-background-color: #2a2a2a;
 }
@@ -145,8 +168,11 @@
 
 /* =========================================================
    🧾 SwiftShare Transfer History Styling (Enhanced v3)
-   ========================================================= */
+   =========================================================
+   This section defines styling for the transfer history table window.
+*/
 
+/* ---------- Table Background ---------- */
 .history-table {
     -fx-background-color: #181818;
     -fx-border-color: #2b2b2b;
@@ -156,7 +182,9 @@
     -fx-font-size: 13px;
 }
 
-/* ---------- Table Header ---------- */
+/* ---------- Table Header ---------- 
+   Gradient headers with glowing blue borders.
+*/
 .table-view .column-header-background {
     -fx-background-color: linear-gradient(to bottom, #0a0a0a, #171717);
     -fx-background-radius: 8 8 0 0;
@@ -176,13 +204,15 @@
     -fx-transition: all 0.2s ease-in-out;
 }
 
-/* Header hover glow */
+/* Header hover glow effect */
 .table-view .column-header:hover .label {
     -fx-effect: dropshadow(gaussian, rgba(0,200,255,0.7), 8, 0.4, 0, 0);
     -fx-text-fill: linear-gradient(to right, #33ddff, #00b4ff);
 }
 
-/* ---------- Table Rows ---------- */
+/* ---------- Table Rows ---------- 
+   Defines alternating row colors and hover highlights.
+*/
 .table-row-cell {
     -fx-background-color: #1f1f1f;
     -fx-border-color: #2a2a2a;
@@ -196,27 +226,9 @@
     -fx-effect: dropshadow(gaussian, rgba(0,150,255,0.3), 8, 0.4, 0, 0);
 }
 
-/* ✅ Colored status text (logs) */
-.table-row-cell .text {
-    -fx-fill: #f5f5f5;
-}
-
-.table-row-cell:selected {
-    -fx-background-color: linear-gradient(to right, #0099ff, #00d4ff);
-    -fx-text-fill: #ffffff;
-    -fx-font-weight: bold;
-    -fx-border-color: transparent;
-}
-
-/* Alternating rows */
-.table-row-cell:odd {
-    -fx-background-color: #1b1b1b;
-}
-.table-row-cell:even {
-    -fx-background-color: #1e1e1e;
-}
-
-/* ---------- Status Color Highlights ---------- */
+/* ---------- Status Color Highlights ---------- 
+   Highlights transfer status as green (Success), red (Failed), yellow (Pending).
+*/
 .table-cell:filled:selected .text {
     -fx-fill: white;
 }
@@ -233,7 +245,9 @@
     -fx-fill: #ffd84c; /* 🟡 Pending */
 }
 
-/* ---------- Scroll Bar ---------- */
+/* ---------- Scroll Bar ---------- 
+   Modern slim blue scroll thumb.
+*/
 .scroll-bar:vertical, .scroll-bar:horizontal {
     -fx-background-color: transparent;
 }

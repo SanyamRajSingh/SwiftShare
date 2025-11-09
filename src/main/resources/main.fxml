@@ -5,6 +5,16 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.control.SplitPane?>
 
+<!-- =========================================================
+     🌌 SwiftShare Main UI Layout (main.fxml)
+     =========================================================
+     This file defines the visual structure of the SwiftShare application.
+     The interface is divided into two sections using a SplitPane:
+     1️⃣ Left Panel → Controls for sending/receiving files
+     2️⃣ Right Panel → Displays active transfer progress and threads
+     The UI is linked to the Controller class for event handling.
+========================================================= -->
+
 <SplitPane dividerPositions="0.45" prefHeight="460.0" prefWidth="800.0"
            stylesheets="@main.css"
            xmlns="http://javafx.com/javafx/11.0.1"
@@ -13,16 +23,21 @@
 
    <items>
 
-      <!-- ===========================
+      <!-- =========================================================
            LEFT PANEL (CONTROL PANEL)
-           =========================== -->
+           =========================================================
+           Contains input fields for IP and port configuration,
+           buttons for selecting files, setting save locations,
+           and controlling file transfer (Send/Receive/History).
+      ========================================================= -->
       <AnchorPane prefWidth="380.0">
          <children>
 
             <VBox spacing="16" alignment="TOP_CENTER" layoutX="25.0" layoutY="25.0" prefWidth="340.0">
                
                <!-- App Header -->
-               <Label text="🚀 SwiftShare" style="-fx-font-size: 22px; -fx-text-fill: linear-gradient(to right, #00c6ff, #0078ff); -fx-font-weight: bold;" />
+               <Label text="🚀 SwiftShare"
+                      style="-fx-font-size: 22px; -fx-text-fill: linear-gradient(to right, #00c6ff, #0078ff); -fx-font-weight: bold;" />
 
                <!-- IP + Port + Host Row -->
                <HBox spacing="10" alignment="CENTER">
@@ -31,13 +46,13 @@
                   <CheckBox fx:id="hosting" text="Host" textFill="white"/>
                </HBox>
 
-               <!-- Upload Row -->
+               <!-- Upload Row (Select File to Send) -->
                <HBox spacing="10" alignment="CENTER">
                   <TextField fx:id="uploadPath" promptText="Select file to send" prefWidth="230.0"/>
                   <Button fx:id="select" text="Select" onAction="#setFileToUpload" prefWidth="80.0"/>
                </HBox>
 
-               <!-- Save Row -->
+               <!-- Save Row (Select Save Location for Received Files) -->
                <HBox spacing="10" alignment="CENTER">
                   <TextField fx:id="downloadPath" promptText="Save Location" prefWidth="230.0"/>
                   <Button fx:id="save" text="Save" onAction="#setSaveLocation" prefWidth="80.0"/>
@@ -49,12 +64,12 @@
                   <Button fx:id="receive" text="Receive" onAction="#download" prefWidth="130.0" />
                </HBox>
 
-               <!-- View History -->
+               <!-- View History Button (Opens Transfer History Window) -->
                <HBox alignment="CENTER">
                   <Button fx:id="history" text="View History" onAction="#showHistory" prefWidth="280.0" />
                </HBox>
 
-               <!-- Version Label (optional aesthetic) -->
+               <!-- Version Label -->
                <Label text="v1.0 • Secure P2P File Transfer"
                       style="-fx-font-size: 11px; -fx-text-fill: #888; -fx-padding: 10 0 0 0;" />
 
@@ -62,16 +77,22 @@
          </children>
       </AnchorPane>
 
-      <!-- ===========================
+      <!-- =========================================================
            RIGHT PANEL (ACTIVE TRANSFERS)
-           =========================== -->
+           =========================================================
+           Displays live progress of file transfers (upload/download).
+           Dynamic content (TitledPane for each transfer) is added programmatically.
+      ========================================================= -->
       <VBox fx:id="transferContainer" alignment="TOP_CENTER" spacing="12" id="transferContainer">
          <padding>
             <Insets top="20" right="20" bottom="20" left="20"/>
          </padding>
+
+         <!-- Header Label for Active Transfers -->
          <Label text="Active Transfers"
                 style="-fx-font-size: 16px; -fx-text-fill: #00bfff; -fx-font-weight: bold; -fx-padding: 0 0 8 0;" />
-         <!-- Dynamic content (transfer threads) will appear here -->
+
+         <!-- Transfer Threads (added dynamically in Controller) -->
       </VBox>
 
    </items>
