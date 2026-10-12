@@ -10,32 +10,41 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.util.List;
 
 /**
- * 💾 SwiftShare Transfer History Window
- * Displays the file transfer history stored in the SQLite database.
- * The window supports both manual and automatic refreshing of data.
- * It uses a modern dark-themed design consistent with the rest of the app.
+ * HistoryWindow
+ *
+ * Dedicated window for inspecting SwiftShare transfer history logged in SQLite.
+ *
+ * Highlights:
+ * - Displays records in a JavaFX TableView bound to TransferRecord properties.
+ * - Supports both on-demand manual refresh and automatic periodic polling (every 5 seconds).
+ * - Offloads SQLite database queries to a background thread to prevent UI freezing.
+ * - Manages auto-refresh timeline lifecycle cleanly per window instance.
  */
 public class HistoryWindow {
 
-    private static final String DB_URL = "jdbc:sqlite:swiftshare.db"; // Database file location
-    private static Timeline autoRefreshTimeline; // Timer for periodic updates
+    // ==================================================
+    // State & Timer Management
+    // ==================================================
+    private static Timeline autoRefreshTimeline;
 
-    // ---------- Main Window Setup ----------
+    // ==================================================
+    // Window Display & Assembly
+    // ==================================================
+
+    /**
+     * Creates, styles, and displays the Transfer History window.
+     */
     public static void show() {
         Stage stage = new Stage();
-        stage.setTitle("Transfer History");
+        stage.setTitle("SwiftShare — Transfer History");
 
-        // 🧾 Create and style the table that displays transfer logs
+        // 1. TableView Setup and Columns Configuration
         TableView<TransferRecord> table = new TableView<>();
         table.getStyleClass().add("history-table");
 
-        // Table columns for file details and status
         TableColumn<TransferRecord, String> fileCol = new TableColumn<>("File Name");
         fileCol.setCellValueFactory(c -> c.getValue().fileNameProperty());
         fileCol.setPrefWidth(180);
@@ -54,16 +63,16 @@ public class HistoryWindow {
 
         TableColumn<TransferRecord, String> dateCol = new TableColumn<>("Date");
         dateCol.setCellValueFactory(c -> c.getValue().transferDateProperty());
-        dateCol.setPrefWidth(150);
+        dateCol.setPrefWidth(160);
 
         TableColumn<TransferRecord, String> statusCol = new TableColumn<>("Status");
         statusCol.setCellValueFactory(c -> c.getValue().statusProperty());
-        statusCol.setPrefWidth(100);
+        statusCol.setPrefWidth(120);
 
         table.getColumns().addAll(fileCol, senderCol, receiverCol, sizeCol, dateCol, statusCol);
 
-        // ---------- UI Header (Title + Refresh Controls) ----------
-        Label title = new Label("📦 SwiftShare Transfer History");
+        // 2. Header and Controls
+        Label title = new Label("📦 Transfer History");
         title.setStyle(
                 "-fx-font-size: 20px;" +
                 "-fx-text-fill: linear-gradient(to right, #00c6ff, #0078ff);" +
@@ -74,7 +83,7 @@ public class HistoryWindow {
         refreshLabel.setStyle("-fx-text-fill: #bbbbbb; -fx-font-size: 12px;");
 
         Button manualRefresh = new Button("↻ Refresh Now");
-        manualRefresh.setOnAction(e -> new Thread(() -> loadData(table)).start());
+        manualRefresh.setOnAction(e -> fetchAndPopulate(table));
         manualRefresh.setStyle(
                 "-fx-background-color: linear-gradient(to right, #0078ff, #00c6ff);" +
                 "-fx-text-fill: white; -fx-font-weight: bold;" +
@@ -82,87 +91,68 @@ public class HistoryWindow {
                 "-fx-cursor: hand;"
         );
 
-        // Button hover effects for interactivity
-        manualRefresh.setOnMouseEntered(e -> manualRefresh.setStyle(
-                "-fx-background-color: linear-gradient(to right, #0096ff, #33ccff);" +
-                "-fx-text-fill: white; -fx-font-weight: bold;" +
-                "-fx-background-radius: 8; -fx-padding: 6 16 6 16;" +
-                "-fx-cursor: hand;"
-        ));
-        manualRefresh.setOnMouseExited(e -> manualRefresh.setStyle(
-                "-fx-background-color: linear-gradient(to right, #0078ff, #00c6ff);" +
-                "-fx-text-fill: white; -fx-font-weight: bold;" +
-                "-fx-background-radius: 8; -fx-padding: 6 16 6 16;" +
-                "-fx-cursor: hand;"
-        ));
-
         HBox topBar = new HBox(15, title, manualRefresh);
         topBar.setPadding(new Insets(5, 0, 10, 0));
 
-        // ---------- Root Layout Container ----------
+        // 3. Root Container
         VBox root = new VBox(10, topBar, refreshLabel, table);
         root.setPadding(new Insets(20));
-        root.setPrefSize(800, 480);
+        root.setPrefSize(840, 500);
         root.setStyle("-fx-background-color: #121212; -fx-border-color: #2b2b2b; -fx-border-radius: 8;");
 
-        // Apply stylesheet and display window
+        // 4. Scene and Window Display
         Scene scene = new Scene(root);
-        scene.getStylesheets().add(Main.class.getResource("/main.css").toExternalForm());
+        try {
+            scene.getStylesheets().add(Main.class.getResource("/main.css").toExternalForm());
+        } catch (Exception ignored) {}
+
         stage.setScene(scene);
         stage.show();
 
-        // Start and stop auto-refresh when appropriate
+        // 5. Start Auto-Refresh Timer and cleanup on window close
         startAutoRefresh(table);
         stage.setOnCloseRequest(event -> stopAutoRefresh());
     }
 
-    // ---------- Load Data from Database ----------
-    private static void loadData(TableView<TransferRecord> table) {
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM transfer_history ORDER BY transfer_date DESC")) {
+    // ==================================================
+    // Data Loading (Offloaded to Background Worker Thread)
+    // ==================================================
 
-            Platform.runLater(() -> table.getItems().clear());
-
-            while (rs.next()) {
-                TransferRecord record = new TransferRecord(
-                        rs.getString("file_name"),
-                        rs.getString("sender"),
-                        rs.getString("receiver"),
-                        String.valueOf(rs.getLong("size_bytes")),
-                        rs.getString("transfer_date"),
-                        rs.getString("status")
-                );
-                Platform.runLater(() -> table.getItems().add(record));
+    /**
+     * Queries the database on a background thread and updates the TableView on the JavaFX thread.
+     */
+    private static void fetchAndPopulate(TableView<TransferRecord> table) {
+        Thread worker = new Thread(() -> {
+            try {
+                List<TransferRecord> records = DatabaseManager.fetchTransfers();
+                Platform.runLater(() -> table.getItems().setAll(records));
+            } catch (Exception e) {
+                System.err.println("⚠️ Error loading history records: " + e.getMessage());
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.ERROR,
-                        "Error loading history: " + e.getMessage(),
-                        ButtonType.OK);
-                alert.setTitle("Database Error");
-                alert.showAndWait();
-            });
-        }
+        });
+        worker.setDaemon(true);
+        worker.setName("HistoryLoader-Thread");
+        worker.start();
     }
 
-    // ---------- Auto-Refresh Setup ----------
-    private static void startAutoRefresh(TableView<TransferRecord> table) {
-        if (autoRefreshTimeline != null) {
-            autoRefreshTimeline.stop();
-        }
+    // ==================================================
+    // Auto-Refresh Timer Management
+    // ==================================================
 
+    private static void startAutoRefresh(TableView<TransferRecord> table) {
+        stopAutoRefresh();
+
+        // Initial immediate load
+        fetchAndPopulate(table);
+
+        // Schedule recurring 5-second polling
         autoRefreshTimeline = new Timeline(
-                new KeyFrame(Duration.seconds(0), event -> new Thread(() -> loadData(table)).start()),
-                new KeyFrame(Duration.seconds(5)) // Refresh every 5 seconds
+                new KeyFrame(Duration.seconds(5), event -> fetchAndPopulate(table))
         );
         autoRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
         autoRefreshTimeline.play();
     }
 
-    // ---------- Stop Auto-Refresh ----------
     private static void stopAutoRefresh() {
         if (autoRefreshTimeline != null) {
             autoRefreshTimeline.stop();
@@ -170,3 +160,4 @@ public class HistoryWindow {
         }
     }
 }
+

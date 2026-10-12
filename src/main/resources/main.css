@@ -142,13 +142,6 @@
     -fx-background-radius: 8;
     -fx-background-color: linear-gradient(to right, #00b4ff, #00e5ff, #00b4ff);
     -fx-effect: dropshadow(gaussian, rgba(0,200,255,0.6), 8, 0.5, 0, 0);
-    -fx-animation: pulse 1.5s infinite linear;
-}
-
-@keyframes pulse {
-    0%   { -fx-opacity: 1; }
-    50%  { -fx-opacity: 0.75; }
-    100% { -fx-opacity: 1; }
 }
 
 /* ---------- Dialog Boxes ---------- 
@@ -226,23 +219,12 @@
     -fx-effect: dropshadow(gaussian, rgba(0,150,255,0.3), 8, 0.4, 0, 0);
 }
 
-/* ---------- Status Color Highlights ---------- 
-   Highlights transfer status as green (Success), red (Failed), yellow (Pending).
-*/
+/* ---------- Table Cell Text ---------- */
 .table-cell:filled:selected .text {
     -fx-fill: white;
 }
 .table-cell:filled .text {
     -fx-fill: #eaeaea;
-}
-.table-cell:filled .text:contains("Success") {
-    -fx-fill: #00ff9d; /* 🟢 Success */
-}
-.table-cell:filled .text:contains("Failed") {
-    -fx-fill: #ff4c4c; /* 🔴 Failure */
-}
-.table-cell:filled .text:contains("Pending") {
-    -fx-fill: #ffd84c; /* 🟡 Pending */
 }
 
 /* ---------- Scroll Bar ---------- 

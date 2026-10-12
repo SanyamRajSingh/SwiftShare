@@ -1,0 +1,30 @@
+# Maven Build Output
+target/
+*.jar
+*.war
+*.ear
+
+# IDE & Editor Settings
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compiled Java Classes in Source Tree
+*.class
+
+# SQLite Databases & Local Transfer History
+database/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Temporary QA & Test Artifacts
+qa_temp/

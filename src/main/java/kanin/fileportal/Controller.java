@@ -12,111 +12,148 @@ import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
-import static kanin.fileportal.Main.*;
+import static kanin.fileportal.Main.rootWindow;
 
 /**
- * Controller class for handling all user actions and UI updates in SwiftShare.
- * Acts as a bridge between the JavaFX UI and backend logic.
+ * Controller
+ *
+ * Central JavaFX Controller for the SwiftShare main window (main.fxml).
+ * Bridges the presentation layer with backend P2P networking and SQLite history services.
+ *
+ * Key Responsibilities:
+ * - Handles user input for IP address, port, and host toggle.
+ * - Manages desktop FileChooser and DirectoryChooser file selection dialogs.
+ * - Validates input parameters before initiating transfers.
+ * - Spawns FileTransferThread instances on worker threads to keep the UI fully responsive.
+ * - Launches the HistoryWindow dialog.
  */
 public class Controller implements Initializable {
 
-    // ---------- UI Components (from FXML) ----------
+    // ==================================================
+    // FXML UI Component Injections
+    // ==================================================
     @FXML
-    private TextField ipInput, portInput, uploadPath, downloadPath;
+    private TextField ipInput;
+    @FXML
+    private TextField portInput;
+    @FXML
+    private TextField uploadPath;
+    @FXML
+    private TextField downloadPath;
     @FXML
     private VBox transferContainer;
     @FXML
     private CheckBox hosting;
 
-    // Accordion to show active transfer progress
+    // Accordion container displaying active transfer progress cards
     public static final Accordion transferList = new Accordion();
 
-    // ---------- Initialization ----------
+    private static final int DEFAULT_PORT = 54000;
+
+    // ==================================================
+    // Initialization
+    // ==================================================
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        // Add the transfer list to the container when the app starts
-        transferContainer.getChildren().addAll(transferList);
+        // Attach the global transfer accordion to the UI container
+        if (!transferContainer.getChildren().contains(transferList)) {
+            transferContainer.getChildren().add(transferList);
+        }
     }
 
-    // ---------- File and Folder Selection ----------
+    // ==================================================
+    // File and Directory Selection
+    // ==================================================
 
-    /** Opens a file chooser to select the file to upload */
+    /** Opens FileChooser dialog to select a source file to send */
     @FXML
     public void setFileToUpload() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Choose a File to Send");
+        chooser.setTitle("SwiftShare — Choose File to Send");
         File file = chooser.showOpenDialog(rootWindow);
         if (file != null) {
             uploadPath.setText(file.getAbsolutePath());
         }
     }
 
-    /** Opens a directory chooser to set the save location for received files */
+    /** Opens DirectoryChooser dialog to select destination folder for received files */
     @FXML
     public void setSaveLocation() {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Choose Save Location");
+        chooser.setTitle("SwiftShare — Choose Save Destination");
         File folder = chooser.showDialog(rootWindow);
         if (folder != null) {
             downloadPath.setText(folder.getAbsolutePath());
         }
     }
 
-    // ---------- Upload / Download Buttons ----------
+    // ==================================================
+    // Transfer Triggers (Send & Receive)
+    // ==================================================
 
-    /** Starts the upload (send) process */
+    /** Initiates outgoing file transmission (Send mode) */
     @FXML
     public void upload() {
         transfer(false);
     }
 
-    /** Starts the download (receive) process */
+    /** Initiates incoming file reception (Receive mode) */
     @FXML
     public void download() {
         transfer(true);
     }
 
-    // ---------- Core Transfer Logic ----------
+    // ==================================================
+    // Core Transfer Dispatcher
+    // ==================================================
 
-    /** Handles both upload and download processes depending on the boolean flag */
+    /**
+     * Validates user inputs and launches a FileTransferThread worker thread.
+     *
+     * @param download true if receiving a file into a directory, false if sending a file
+     */
     private void transfer(boolean download) {
         String ip = ipInput.getText().trim();
-        int port = 54000; // Default port
+        int port = DEFAULT_PORT;
 
-        // Validate custom port input
+        // 1. Validate custom port input
         try {
             int input = Integer.parseInt(portInput.getText().trim());
             if (input > 1024 && input < 65536) {
                 port = input;
             }
-        } catch (Exception ignored) {}
+        } catch (NumberFormatException ignored) {}
 
-        // Validate file and directory paths
-        File file = new File(uploadPath.getText().trim());
-        boolean valid = !file.isDirectory();
-        String[] fileErrorMsgs = {"Error: Desired File Unavailable.", "Please enter a valid and accessible file path"};
-        String confirmMsg = String.format("Confirm outbound file transfer of '%s' on %s:%d",
-                file.getName(), hosting.isSelected() ? "localhost" : ip, port);
+        // 2. Validate file and path configuration
+        File file;
+        boolean valid;
+        String[] fileErrorMsgs;
+        String confirmMsg;
 
-        // Adjust conditions for download
         if (download) {
             file = new File(downloadPath.getText().trim());
-            valid = file.isDirectory();
-            fileErrorMsgs = new String[]{"Error: Invalid Save Location.", "Please enter a valid working directory"};
-            confirmMsg = String.format("Confirm inbound file transfer to '%s' on %s:%d", file.getName(), ip, port);
+            valid = file.exists() && file.isDirectory();
+            fileErrorMsgs = new String[]{"Error: Invalid Save Location", "Please select an existing and writable folder."};
+            confirmMsg = String.format("Confirm incoming file transfer to '%s' on %s:%d",
+                    file.getName(), hosting.isSelected() ? "localhost" : ip, port);
+        } else {
+            file = new File(uploadPath.getText().trim());
+            valid = file.exists() && file.isFile();
+            fileErrorMsgs = new String[]{"Error: Desired File Unavailable", "Please select a valid and accessible file path."};
+            confirmMsg = String.format("Confirm outbound file transfer of '%s' on %s:%d",
+                    file.getName(), hosting.isSelected() ? "localhost" : ip, port);
         }
 
-        // Execute transfer based on user input and mode (host/client)
-        if (file.exists() && valid) {
-            if (alertMsg(confirmMsg, "Please press OK to confirm.", Alert.AlertType.CONFIRMATION)) {
+        // 3. Confirm and dispatch transfer thread
+        if (valid) {
+            if (alertMsg(confirmMsg, "Press OK to proceed with the transfer.", Alert.AlertType.CONFIRMATION)) {
                 if (hosting.isSelected()) {
                     new FileTransferThread(file, port).start();
-                } else if (!ip.trim().isEmpty()) {
+                } else if (!ip.isEmpty()) {
                     new FileTransferThread(file, port, ip).start();
                 } else {
-                    alertMsg("Error: Failed to establish connection",
-                            "Please enter a valid IP Address or check your settings.",
-                            Alert.AlertType.ERROR);
+                    alertMsg("Connection Error", "Please provide a valid IP address or check 'Host'.", Alert.AlertType.ERROR);
                 }
             }
         } else {
@@ -124,20 +161,11 @@ public class Controller implements Initializable {
         }
     }
 
-    // ---------- Common Alert Utility ----------
+    // ==================================================
+    // History Window Display
+    // ==================================================
 
-    /** Displays alert dialogs (confirmation, error, info) */
-    public static boolean alertMsg(String content, String subtext, Alert.AlertType type) {
-        Alert alert = new Alert(type, subtext, ButtonType.OK);
-        alert.setTitle("SwiftShare");
-        alert.setHeaderText(content);
-        Optional<ButtonType> result = alert.showAndWait();
-        return result.isPresent() && result.get() == ButtonType.OK;
-    }
-
-    // ---------- Transfer History Window ----------
-
-    /** Opens the Transfer History window showing all previous transfers */
+    /** Opens the SQLite Transfer History window */
     @FXML
     public void showHistory() {
         try {
@@ -147,4 +175,34 @@ public class Controller implements Initializable {
             alertMsg("Error", "Failed to open transfer history: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
+
+    // ==================================================
+    // Dialog Utility
+    // ==================================================
+
+    /**
+     * Displays a JavaFX Alert dialog.
+     * Supports both two-button confirmation (OK/Cancel) and single-button notification dialogs.
+     *
+     * @param content header text of the alert
+     * @param subtext content details
+     * @param type    the Alert.AlertType
+     * @return true if the user confirmed (OK), false otherwise
+     */
+    public static boolean alertMsg(String content, String subtext, Alert.AlertType type) {
+        Alert alert = new Alert(type);
+        alert.setTitle("SwiftShare");
+        alert.setHeaderText(content);
+        alert.setContentText(subtext);
+
+        if (type == Alert.AlertType.CONFIRMATION) {
+            alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+        } else {
+            alert.getButtonTypes().setAll(ButtonType.OK);
+        }
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
+    }
 }
+

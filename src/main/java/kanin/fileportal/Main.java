@@ -8,51 +8,69 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 /**
- * Main class serves as the primary entry point for the SwiftShare JavaFX application.
- * It initializes the SQLite database and loads the main user interface defined in FXML.
+ * Main
+ *
+ * Primary JavaFX Application entry point for SwiftShare.
+ *
+ * Architecture Highlights:
+ * - Bootstrapped via Launcher.java to bypass the Java 11+ unnamed module / module-path checks
+ *   when executing from a shaded fat JAR.
+ * - Initializes the SQLite database schema (via DatabaseManager) upon startup.
+ * - Loads the declarative FXML interface (main.fxml) and attaches the root Stage.
+ * - Holds a static reference to the primary Stage (rootWindow) used for modal file choosers.
  */
 public class Main extends Application {
 
-    // Global reference to the main application window (used by controllers for dialogs and alerts)
+    // ==================================================
+    // Global Window Reference
+    // ==================================================
     public static Stage rootWindow;
 
-    @Override
-    public void start(Stage rootWindow) {
-        try {
-            // Store reference to the primary stage for global access
-            Main.rootWindow = rootWindow;
+    // ==================================================
+    // JavaFX Application Lifecycle
+    // ==================================================
 
-            // ✅ Initialize the database (creates new DB if not already present)
+    @Override
+    public void start(Stage primaryStage) {
+        try {
+            // Retain reference to root stage for dialogs and alerts
+            Main.rootWindow = primaryStage;
+
+            // Step 1: Ensure SQLite database schema is initialized
             DatabaseManager.initializeDatabase();
 
-            // Load the main UI layout from the FXML file
-            FXMLLoader loader = new FXMLLoader(Main.class.getClassLoader().getResource("main.fxml"));
+            // Step 2: Load declarative layout from FXML
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/main.fxml"));
             Scene scene = new Scene(loader.load());
 
-            // Configure window appearance and behavior
-            rootWindow.setScene(scene);
-            rootWindow.setTitle("SwiftShare");
-            rootWindow.setMinWidth(706);
-            rootWindow.setMinHeight(372);
-            rootWindow.setOnCloseRequest(e -> System.exit(0));
-            rootWindow.show();
+            // Step 3: Configure primary stage properties
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("SwiftShare — Peer-to-Peer File Transfer");
+            primaryStage.setMinWidth(706);
+            primaryStage.setMinHeight(372);
 
-            // Confirmation message in the console
+            // Terminate background threads on application window closure
+            primaryStage.setOnCloseRequest(event -> System.exit(0));
+
+            // Step 4: Render window
+            primaryStage.show();
             System.out.println("✅ SwiftShare started successfully. Database ready.");
 
         } catch (IOException e) {
-            // Handle UI loading issues (e.g., missing FXML or resource errors)
-            System.err.println("❌ Failed to load UI: " + e.getMessage());
+            System.err.println("❌ Failed to load UI resources (main.fxml): " + e.getMessage());
             e.printStackTrace();
         } catch (Exception e) {
-            // Handle any unexpected startup issues
-            System.err.println("⚠️ Unexpected error during startup: " + e.getMessage());
+            System.err.println("⚠️ Unexpected error during application startup: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    // Application entry point — launches the JavaFX runtime
+    // ==================================================
+    // Main Method (Delegated from Launcher)
+    // ==================================================
+
     public static void main(String[] args) {
         launch(args);
     }
 }
+
