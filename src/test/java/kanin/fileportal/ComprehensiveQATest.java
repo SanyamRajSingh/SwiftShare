@@ -278,14 +278,14 @@ public class ComprehensiveQATest {
         Files.write(f1.toPath(), b1);
         Files.write(f2.toPath(), b2);
 
-        FileTransferThread r1 = new FileTransferThread(recvDir, 55011);
-        FileTransferThread r2 = new FileTransferThread(recvDir, 55012);
+        FileTransferThread r1 = new FileTransferThread(recvDir, 55031);
+        FileTransferThread r2 = new FileTransferThread(recvDir, 55032);
         r1.start();
         r2.start();
-        Thread.sleep(300);
+        Thread.sleep(600);
 
-        FileTransferThread s1 = new FileTransferThread(f1, 55011, "127.0.0.1");
-        FileTransferThread s2 = new FileTransferThread(f2, 55012, "127.0.0.1");
+        FileTransferThread s1 = new FileTransferThread(f1, 55031, "127.0.0.1");
+        FileTransferThread s2 = new FileTransferThread(f2, 55032, "127.0.0.1");
         s1.start();
         s2.start();
 
